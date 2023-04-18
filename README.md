@@ -16,3 +16,4 @@
 영상처리 알고리즘 구현을 위해 JAVASCRIPT를 사용하였습니다.
 
 2. 프로젝트 구현 화면
+![image](https://user-images.githubusercontent.com/71168409/232693263-4e99a37c-a06d-435f-af82-7e0617559923.png)
