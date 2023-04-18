@@ -17,6 +17,7 @@
 
 2. 프로젝트 구현 화면
 ![image](https://user-images.githubusercontent.com/71168409/232693263-4e99a37c-a06d-435f-af82-7e0617559923.png)
+시연영상: https://youtu.be/BECrF8Ou6RE
 3. 프로젝트의 의의
 
 느낀점: 디지털 영상처리를 Javascript 언어로 구현해봄으로써, 영상처리의 다양성을 느낄 수 있었습니다. 알고리즘 구현 과정과 영상처리를 통한 시각적 변화를 확인할 수 있어서 흥미로운 프로젝트였다고 생각합니다 .
