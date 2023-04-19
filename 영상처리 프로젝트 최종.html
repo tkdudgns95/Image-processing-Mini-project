@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<HTML>
+    <HEAD>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Dongle&display=swap'); /*구글 폰트 URL 가져오기 */
+            @import url('https://fonts.googleapis.com/css2?family=DynaPuff&display=swap'); /*구글 폰트 URL 가져오기 */
+          #title1{ /*title1의 글자 폰트 지정  */ 
+            font-family: 'Dongle', sans-serif;
+            font-size: 70px
+          }  
+          #title2{ /*title2의 글자 폰트 지정  */
+            font-family: 'Dongle', sans-serif;
+            font-size: 40px
+          }
+          #title3{ /*title3의 글자 폰트 지정  */
+            font-family: 'DynaPuff', cursive;
+            text-align: left;
+            font-size: 50px
+          }
+    
+        .filebox label { /*파일박스 디자인 설정*/
+                display: inline-block;
+                 padding: .5em .75em;
+                color: #fbfbfb;
+                font-size: inherit;
+                 line-height: normal;
+                 vertical-align: middle;
+                 background-color: #020823;
+                cursor: pointer;
+                border: 1px solid #020823;
+                border-bottom-color: #020823;
+                border-radius: .25em;
+        }
+
+        .filebox input[type="file"] {  /* 파일 필드 숨기기 */
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                padding: 0;
+                margin: -1px;
+                overflow: hidden;
+                clip:rect(0,0,0,0);
+                border: 0;
+        }
+
+        .filebox label:hover { /* 파일 선택 버튼 호버(색이변하는)효과 */
+                background-color:#3846a7;
+                transition: 0.5s;
+        }
+
+
+        select {
+                width: 200px; /* 원하는 너비설정 */
+                padding: .8em .5em; /* 여백으로 높이 설정 */
+                font-family: inherit;  /* 폰트 상속 */
+                background: url(https://farm1.staticflickr.com/379/19928272501_4ef877c265_t.jpg) no-repeat 95% 50%; /* 네이티브 화살표 대체 */  
+                border: 1px solid #999; 
+                border-radius: .25em; /* iOS 둥근모서리 제거 */
+                -webkit-appearance: none; /* 네이티브 외형 감추기 */
+                -moz-appearance: none;
+                appearance: none;
+                } 
+                select::-ms-expand {
+                /* for IE 11 */
+                 display: none;
+                }
+ body { /* body 태그 내의 배경이미지 지정, 반복하지 않고, 화면 꽉차게 지정*/
+    background-image:url('https://cdn.crowdpic.net/detail-thumb/thumb_d_C5B9C4B04D6C173872085E81D2BE0FA3.jpg');
+    background-repeat: no-repeat;
+    background-size:cover;
+    
+    
+}           
+        </style>
+
+        <script  lang="javascript">
+            // 전역 변수부
+            var inCanvas, inCtx, outCanvas, outCtx;
+            var inImage, inH, inW; // 입력 파일, 입력 배열, 입력폭과 높이
+            var outImage, outH, outW; // 출력 파일, 출력 배열, 출력폭과 높이
+            var inPaper, outPaper; // 종이
+            var inFile;
+
+            // 함수 선언부
+            //////////////////////
+            //// 공통 함수부
+            //////////////////////
+            function init() {
+                inCanvas = document.getElementById("inCanvas"); // 도화지에 접근
+                inCtx = inCanvas.getContext('2d'); // 물감, 붓이 들은 통
+                outCanvas = document.getElementById("outCanvas"); // 도화지에 접근
+                outCtx = outCanvas.getContext('2d'); // 물감, 붓이 들은 통
+            }
+            function openRawImage() {
+                inFile = document.getElementById("inFile").files[0]; // Lena256.raw inFile에 "inFile" Element 객체 반환.
+              
+                inH = inW =  Math.floor(Math.sqrt(inFile.size)); // 이미지의 폭과 높이를 계산
+                
+                inImage = new Array(inH);  //  이미지를 불러올 메모리 확보
+                for(var i=0; i<inH; i++)
+                    inImage[i] = new Array(inW);
+               
+                inCanvas.height = inH; // 캔버스 크기 조절
+                inCanvas.width = inW; // 캔버스 크기 조절
+
+                // RAW 파일 --> 메모리(배열)로 로딩
+                var reader = new FileReader(); // 파일 객체(reader)생성
+                reader.readAsBinaryString(inFile); // 지정된 Blob 또는 File의 내용 읽기를 시작하는데 사용.
+                reader.onload = function() {  // 익명 함수
+                    var blob = reader.result; // 파일을 한 덩어리(blob)에 넣기
+                    // blob에서 한점한점(256x256) 씩 뽑아서 2차원 배열에 넣기
+                    for(var i=0; i<inH; i++) {
+                        for(var k=0; k<inW; k++) {
+                            var sPixel = (i*inH + k); // 시작 위치
+                            var ePixel = (i*inH + k) + 1; // 끝 위치
+                            inImage[i][k] = blob.slice(sPixel, ePixel).charCodeAt(0); // 한점만 썰어내기. '뺇'--> 253
+                        }
+                    }
+                    displayImage();                   
+                }
+            }
+
+            function displayImage() {
+                // 입력 메모리를 종이에 콕콕콕 찍기...
+                inPaper = inCtx.createImageData(inH, inW); // 빈 종이 준비
+                for(var i=0; i<inH; i++) {
+                    for(var k=0; k<inW; k++) {
+                        var px = inImage[i][k];
+                        inPaper.data[ (i*inH + k)*4 + 0 ] = px; // R
+                        inPaper.data[ (i*inH + k)*4 + 1 ] = px; // G
+                        inPaper.data[ (i*inH + k)*4 + 2 ] = px; // B
+                        inPaper.data[ (i*inH + k)*4 + 3 ] = 255; // Alpha
+                    }
+                }
+                inCtx.putImageData(inPaper,0,0); // 종이를 캔버스 왼쪽위에 딱 붙여서 부착.
+                // 출력 메모리를 종이에 콕콕콕 찍기...
+                outCanvas.height=outH;
+                outCanvas.width=outW;
+                outPaper = outCtx.createImageData(outH, outW); // 빈 종이 준비
+                for(var i=0; i<outH; i++) {
+                    for(var k=0; k<outW; k++) {
+                        var px = outImage[i][k];
+                        outPaper.data[ (i*outH + k)*4 + 0 ] = px; // R
+                        outPaper.data[ (i*outH + k)*4 + 1 ] = px; // G
+                        outPaper.data[ (i*outH + k)*4 + 2 ] = px; // B
+                        outPaper.data[ (i*outH + k)*4 + 3 ] = 255; // Alpha
+                    }
+                }
+                outCtx.putImageData(outPaper,0,0); // 종이를 캔버스 왼쪽위에 딱 붙여서 부착.
+            
+            }
+             ////////////////////////
+             //// *** 영상 처리 함수부
+             ////////////////////////
+            function selectAlgo(selectNum) {
+                switch(parseInt(selectNum.value)) {
+                    case 100 : equal_image(); break;
+                    case 101 : add_image(); break;
+                    case 102 : reverse_image(); break;
+                    case 103 : gray_image(); break;
+                    case 104 : left_right_reverse_image(); break;
+                    case 105 : up_down_reverse_image(); break;
+                    case 106 : rotate90_image(); break;
+                    case 107 : rotate180_image(); break;
+                    case 108 : rotate270_image(); break;
+                    case 109 : double_downsize_image(); break;
+                    case 110 : double_upsize_image(); break;
+                    case 111 : bw_image(); break;
+                    case 112 : bw2_image(); break;
+                    case 113 : bw3_image(); break;
+
+                    case 200 : zoomOut_image(); break;
+                    case 201 : zoomIn_image(); break;
+                    case 202 : zoomIn2_image(); break;
+                    case 210 : rotate_image(); break;
+                    case 211 : rotate2_image(); break;
+
+                    case 300 : embos_image(); break;
+                    case 301 : blur_image(); break;
+                    case 302 : edge_image(); break;
+
+                    case 400 : histoSt_image(); break;
+                    case 401 : endIn_image(); break;
+                    case 402 : histoEqual_image(); break;
+                }
+            }
+            //////////////////////
+            //// *** 영상 처리 함수부
+            //////////////////////
+            // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+
+            function equal_image() { // 동일 영상 처리
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        outImage[i][k] = inImage[i][k];
+                    }
+                }
+                // *******************************
+                displayImage();
+            }
+            
+           function add_image() { // 밝게/어둡게 처리
+                outH = inH;
+                outW = inW;
+
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+
+                var value = parseInt(prompt("값", "50"));
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        if (inImage[i][k] + value < 0 )
+                            outImage[i][k] = 0;
+                        else if (inImage[i][k] + value > 255 )
+                            outImage[i][k] = 255;
+                        else 
+                            outImage[i][k] = inImage[i][k]+value;
+                            // value 입력값 -50입력.
+                    }
+                }
+                displayImage();
+            }
+
+            function reverse_image() { // 반전 처리
+                outH = inH;
+                outW = inW;
+
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        outImage[i][k] = 255 - inImage[i][k];
+                    }
+                }
+                displayImage();
+            }
+
+            function gray_image() { // 흑백 처리
+                outH = inH;
+                outW = inW;
+
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+
+                for(var i=0; i<inH; i++){
+                for(var k=0; k<inW; k++){
+                    outImage[i][k] = inImage[i][k];
+                    if(outImage[i][k] < 127){ // 화소값이 127 보다 작다면?
+                        outImage[i][k] = 0; // 맞다면 흑으로 처리
+                    }else{
+                        outImage[i][k] = 255; // 아니라면 백으로 처리
+                    }
+                }
+            }
+                displayImage();
+            }
+
+            function left_right_reverse_image() { // 좌우 미러링
+                outH = inH;
+                outW = inW;
+
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+
+                for (var i = 0; i<outH; i++){
+                    for (var k = 0; k < outW; k++) {
+                        outImage[i][inW-k-1] = inImage[i][k];
+                    }
+                }
+                displayImage();
+            }
+
+            function up_down_reverse_image() { // 상하 미러링
+                outH = inH;
+                outW = inW;
+
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+
+                for (var i = 0; i<outH; i++){
+                    for (var k = 0; k < outW; k++) {
+                        outImage[inH-i-1][k] = inImage[i][k];
+                    }
+                } 
+                displayImage();
+            }
+
+            function rotate90_image() { // 90도 회전
+                outH = inH;
+                outW = inW;
+
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+
+                for (var i = 0; i<outH; i++){
+                    for (var k = 0; k < outW; k++) {
+                        outImage[i][k] = inImage[outH-k-1][i];
+                    }
+                }
+                displayImage();
+            }
+
+            function rotate180_image() { // 180도 회전
+                outH = inH;
+                outW = inW;
+
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+
+                for (var i = 0; i<outH; i++){
+                    for (var k = 0; k < outW; k++) {
+                        outImage[i][k] = inImage[outH-1-i][outW-1-k];
+                    }
+                }
+                displayImage();
+            }
+
+            function rotate270_image() { // 270도 회전 (미완성)
+                outH = inH;
+                outW = inW;
+
+                outImage = new Array(outW);
+                for(var i=0; i<outW; i++)
+                    outImage[i] = new Array(outH);
+
+                for (var i = 0; i<inW; i++){
+                    for (var k = 0; k < inH; k++) {
+                        outImage[i][k] = inImage[k][(inH-i-1)];
+                    }
+                }
+                displayImage();
+            }
+
+            function double_downsize_image() { // 2배 축소
+                outH = inH;
+                outW = inW;
+
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+
+                var tmpoutH = parseInt(outH/2);
+                var tmpoutW = parseInt(outW/2);
+
+                for (var i = 0; i<outH; i++){
+                    for (var k = 0; k < outW; k++) {
+                        outImage[parseInt(i/2)][parseInt(k/2)] = inImage[i][k];
+                    }
+                }
+                displayImage();
+            }
+
+            function double_upsize_image()  { // 2배 확대
+               
+            outW = inW * 2;
+            outH = inH * 2;
+
+            outImage = new Array(outW);
+            for (var i = 0; i < outW; i++) {
+                outImage[i] = new Array(outH);
+            }
+            for (var i = 0; i < inW; i++) {
+                for (var k = 0; k < inH; k++) {
+                    outImage[i * 2][k * 2] = inImage[i][k];
+                    outImage[i * 2 + 1][k * 2 + 1] = inImage[i][k];
+                }
+            }
+            displayImage();
+        }
+
+            function bw_image() { // 흑백(127) 처리
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        if (inImage[i][k] <= 127)
+                            outImage[i][k] = 0;
+                        else
+                            outImage[i][k] = 255;    
+                    }
+                }
+                // *******************************
+                displayImage();
+            }
+
+            function bw2_image() { // 흑백(평균값) 처리
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                var avgValue, hapValue = 0;   
+                
+                for(var i=0; i<inH; i++) 
+                    for (var k=0; k<inW; k++)
+                        hapValue += inImage[i][k];
+                avgValue = hapValue / (inH*inW); 
+
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        if (inImage[i][k] <= avgValue)
+                            outImage[i][k] = 50; // 흑의 평균값 50
+                        else
+                            outImage[i][k] = 120; // 백의 평균값 120
+                    }
+                }
+                // *******************************
+                displayImage();
+            }
+
+            function bw3_image() { //흑백(중위수) 처리
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                var centerValue = 0;
+                var oneAry = new Array(inH*inW);
+                var index=0;
+                for(var i=0; i<inH; i++) 
+                    for (var k=0; k<inW; k++) 
+                        oneAry[index++] = inImage[i][k];
+                oneAry.sort();
+                centerValue = oneAry[parseInt((inH*inW)/2)];
+
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        if (inImage[i][k] <= centerValue)
+                            outImage[i][k] = 0;
+                        else
+                            outImage[i][k] = 255;
+                    }
+                }
+                // *******************************
+                displayImage();
+            }
+
+            function zoomOut_image() { // 축소(배율)처리.
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                var scale = parseInt(prompt("축소배율", "2"));
+
+                outH = parseInt(inH / scale);
+                outW = parseInt(inW / scale);
+
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // 캔버스 크기 변경
+                outCanvas.height = outH;
+                outCanvas.width = outW;
+                // ** 진짜 영상처리 알고리즘 구현 **                
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        outImage[parseInt(i/scale)][parseInt(k/scale)] = inImage[i][k];
+                        //  사용자가 입력한 scale(배율)에 따른 축소 구현.
+                    }
+                }
+                // *******************************
+                displayImage();
+            }
+
+            function zoomIn_image() { //확대(배율) 처리
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                var scale = parseInt(prompt("확대배율", "2"));
+                outH = parseInt(inH * scale);
+                outW = parseInt(inW * scale);
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // 캔버스 크기 변경
+                outCanvas.height = outH;
+                outCanvas.width = outW;
+                // ** 진짜 영상처리 알고리즘 구현 **                
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        outImage[parseInt(i*scale)][parseInt(k*scale)] = inImage[i][k];
+                        // 사용자가 입력한 scale(배율)에 따른 확대 구현.
+                    }
+                }
+                // *******************************
+                displayImage();
+            }
+
+            function zoomIn2_image() { //확대(백워딩) 처리
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                var scale = parseInt(prompt("확대배율", "2"));
+                outH = parseInt(inH * scale);
+                outW = parseInt(inW * scale);
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // 캔버스 크기 변경
+                outCanvas.height = outH;
+                outCanvas.width = outW;
+
+                // ** 진짜 영상처리 알고리즘 구현 **
+                
+                for(var i=0; i<outH; i++) {
+                    for (var k=0; k<outW; k++) {
+                        outImage[i][k] = inImage[parseInt(i/scale)][parseInt(k/scale)];
+                        
+                    }
+                }
+                // *********************************
+                displayImage();
+            }
+
+            function rotate_image() { //회전 처리
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                var angle = parseInt(prompt("각도", "45"));
+                angle = angle * Math.PI / 180;
+                // 공식
+                // new_i = cos*i - sin*k
+                // new_k = sin*i + cos*k
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        var new_i = parseInt(Math.cos(angle) * i - Math.sin(angle) * k);
+                        var new_k = parseInt(Math.sin(angle) * i + Math.cos(angle) * k);
+                        if ( ( (0 <= new_i) && (new_i < outH) ) && ( (0 <= new_k) && (new_k < outW)))  {
+                            outImage[new_i][new_k] = inImage[i][k];
+                        }                        
+                    }
+                }
+                // *******************************
+                displayImage();
+            }
+
+            function rotate2_image() { //회전(중앙, 백워딩)처리
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                var angle = parseInt(prompt("각도", "45"));
+                angle = angle * Math.PI / 180;
+                // 공식
+                // new_i = cos*i - sin*k
+                // new_k = sin*i + cos*k
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        var new_i = parseInt(Math.cos(angle) * i - Math.sin(angle) * k); 
+                        var new_k = parseInt(Math.sin(angle) * i + Math.cos(angle) * k);
+                        // angle(각도, 사용자 입력값60) new_i, new_k에 연산값 저장 후 출력
+                        if ( ( (0 <= new_i) && (new_i < outH) ) && ( (0 <= new_k) && (new_k < outW)))  {
+                            outImage[new_i][new_k] = inImage[i][k];
+                        }                        
+                    }
+                }
+                // *******************************
+                displayImage();
+            }
+
+            function embos_image() { // 엠보싱 처리.
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                // 짱! 중요
+                var mask = [    [ -1.0 ,  0.0 ,  0.0 ], 
+                                [  0.0 ,  0.0 ,  0.0 ], 
+                                [  0.0 ,  0.0 ,  1.0 ]  ];
+                // 임시 입력 배열 (입력배열+2) ==> 실수 처리
+                var tmpInImage = new Array(inH+2);
+                for(var i=0; i<inH+2; i++)
+                    tmpInImage[i] = new Array(inW+2);
+                // 임시 입력 초기화 (127) --> 평균값? --> 정말로 한줄도 못참는다. (가장자리 가까운 값으로..)
+                for(var i=0; i<inH+2; i++) 
+                    for (var k=0; k<inW+2; k++) 
+                        tmpInImage[i][k] = 127.0;
+                // 입력 배열 --> 임시 입력 배열의 가운데 쏙~ 
+                for(var i=0; i<inH; i++) 
+                    for (var k=0; k<inW; k++) 
+                        tmpInImage[i+1][k+1] = inImage[i][k];
+
+                // 임시 출력 배열(출력배열과 동일) ==> 실수
+                var tmpOutImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    tmpOutImage[i] = new Array(outW);
+                //** 회선 연산 ** 마스크를 잡아서 전체를 긁으면서 계산하기...
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        var S = 0.0;
+                        for(var m=0; m<3; m++) 
+                            for (var n=0; n<3; n++) 
+                                S += tmpInImage[i+m][k+n] * mask[m][n];
+                        
+                        tmpOutImage[i][k] = S;
+                    }
+                }
+                // 후처리 : 마스크의 합계가 0일 경우.... (예외 있음)
+                for (var i=0; i<outH; i++)
+                    for (var k=0; k<outW; k++)
+                        tmpOutImage[i][k] += 127.0;
+                // 임시 출력 배열 --> 출력 배열
+                for (var i=0; i<outH; i++)
+                    for (var k=0; k<outW; k++)
+                        outImage[i][k] = parseInt(tmpOutImage[i][k]);
+                // *******************************
+                displayImage();
+            }
+
+            function blur_image() { // 블러링 처리.
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                // 짱! 중요
+                var mask = [    [ 1/9.0 , 1/9.0 ,  1/9.0 ], 
+                                [  1/9.0 ,  1/9.0 ,  1/9.0 ], 
+                                [  1/9.0 ,  1/9.0 ,  1/9.0 ]  ];
+                // 임시 입력 배열 (입력배열+2) ==> 실수 처리
+                var tmpInImage = new Array(inH+2);
+                for(var i=0; i<inH+2; i++)
+                    tmpInImage[i] = new Array(inW+2);
+                // 임시 입력 초기화 (127) --> 평균값? --> 정말로 한줄도 못참는다. (가장자리 가까운 값으로..)
+                for(var i=0; i<inH+2; i++) 
+                    for (var k=0; k<inW+2; k++) 
+                        tmpInImage[i][k] = 127.0;
+                // 입력 배열 --> 임시 입력 배열의 가운데 쏙~ 
+                for(var i=0; i<inH; i++) 
+                    for (var k=0; k<inW; k++) 
+                        tmpInImage[i+1][k+1] = inImage[i][k];
+
+                // 임시 출력 배열(출력배열과 동일) ==> 실수
+                var tmpOutImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    tmpOutImage[i] = new Array(outW);
+                //** 회선 연산 ** 마스크를 잡아서 전체를 긁으면서 계산하기...
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        var S = 0.0;
+                        for(var m=0; m<3; m++) 
+                            for (var n=0; n<3; n++) 
+                                S += tmpInImage[i+m][k+n] * mask[m][n];
+                        
+                        tmpOutImage[i][k] = S;
+                    }
+                }
+                // 후처리 : 마스크의 합계가 0일 경우.... (예외 있음)
+                for (var i=0; i<outH; i++)
+                    for (var k=0; k<outW; k++)
+                        tmpOutImage[i][k] += 127.0;
+                // 임시 출력 배열 --> 출력 배열
+                for (var i=0; i<outH; i++)
+                    for (var k=0; k<outW; k++)
+                        outImage[i][k] = parseInt(tmpOutImage[i][k]);
+                // *******************************
+                displayImage();
+            }
+
+            function edge_image() { // 윤곽선 추출
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                // 짱! 중요
+                var mask = [    [   0.0 , -1.0 ,  0.0 ], 
+                                [  -1.0 ,  2.0 ,  0.0 ], 
+                                [   0.0 ,  0.0 ,  1.0 ]  ];
+                // 임시 입력 배열 (입력배열+2) ==> 실수 처리
+                var tmpInImage = new Array(inH+2);
+                for(var i=0; i<inH+2; i++)
+                    tmpInImage[i] = new Array(inW+2);
+                // 임시 입력 초기화 (127) --> 평균값? --> 정말로 한줄도 못참는다. (가장자리 가까운 값으로..)
+                for(var i=0; i<inH+2; i++) 
+                    for (var k=0; k<inW+2; k++) 
+                        tmpInImage[i][k] = 127.0;
+                // 입력 배열 --> 임시 입력 배열의 가운데 쏙~ 
+                for(var i=0; i<inH; i++) 
+                    for (var k=0; k<inW; k++) 
+                        tmpInImage[i+1][k+1] = inImage[i][k];
+
+                // 임시 출력 배열(출력배열과 동일) ==> 실수
+                var tmpOutImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    tmpOutImage[i] = new Array(outW);
+                //** 회선 연산 ** 마스크를 잡아서 전체를 긁으면서 계산하기...
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        var S = 0.0;
+                        for(var m=0; m<3; m++) 
+                            for (var n=0; n<3; n++) 
+                                S += tmpInImage[i+m][k+n] * mask[m][n];
+                        
+                        tmpOutImage[i][k] = S;
+                    }
+                }
+                // 후처리 : 마스크의 합계가 0일 경우.... (예외 있음)
+                for (var i=0; i<outH; i++)
+                    for (var k=0; k<outW; k++)
+                        tmpOutImage[i][k] += 127.0;
+                // 임시 출력 배열 --> 출력 배열
+                for (var i=0; i<outH; i++)
+                    for (var k=0; k<outW; k++)
+                        outImage[i][k] = parseInt(tmpOutImage[i][k]);
+                // *******************************
+                displayImage();
+            }
+
+            function histoSt_image() { // 히스토스램 스트래칭 처리
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                // out = (in - low / (high - low) * 255.0)
+                var low=inImage[0][0], high=inImage[0][0];
+                for(var i=0; i<inH; i++) {
+                    for(var k=0; k<inW; k++) {
+                        if(inImage[i][k] < low)
+                            low = inImage[i][k];
+                        if(inImage[i][k] > high)
+                            high = inImage[i][k];
+                    }
+                }
+
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        var out = ((inImage[i][k] - low) / (high - low) * 255.0)
+                        outImage[i][k] = parseInt(out);
+                    }
+                }
+                // *******************************
+                displayImage();
+            }
+
+            function endIn_image() { // 엔드-인 탐색 처리.
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                // out = (in - low / (high - low) * 255.0)
+                var low=inImage[0][0], high=inImage[0][0];
+                for(var i=0; i<inH; i++) {
+                    for(var k=0; k<inW; k++) {
+                        if(inImage[i][k] < low)
+                            low = inImage[i][k];
+                        if(inImage[i][k] > high)
+                            high = inImage[i][k];
+                    }
+                }
+                low += 50;
+                high -= 50;
+
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        var out = ((inImage[i][k] - low) / (high - low) * 255.0)
+                        outImage[i][k] = parseInt(out);
+                    }
+                }
+                // *******************************
+                displayImage();
+            }
+
+            function histoEqual_image() { // 평활화 처리.
+                // (중요!) 출력 영상의 크기를 결정 --> 알고리즘에 따름.
+                outH = inH;
+                outW = inW;
+                // 출력 이미지 메모리 할당.
+                outImage = new Array(outH);
+                for(var i=0; i<outH; i++)
+                    outImage[i] = new Array(outW);
+                // ** 진짜 영상처리 알고리즘 구현 **
+                // 1단계 : 히스토그램 생성
+                var histo = new Array(256);
+                for (var i=0; i<256; i++) // 초기화
+                    histo[i] = 0;
+
+                for(var i=0; i<inH; i++) 
+                    for (var k=0; k<inW; k++) 
+                        histo[inImage[i][k]] ++;
+                // 2단계 : 누적 히스토그램 생성
+                var sumHisto = new Array(256);
+                for (var i=0; i<256; i++) // 초기화
+                    sumHisto[i] = 0;
+                var sumValue = 0;
+                for (var i=0; i<256; i++) {
+                    sumValue += histo[i];
+                    sumHisto[i] = sumValue;
+                }
+
+                // 3단계 : 정규화된 누적합 생성
+                // n[i] = sumHisto[i] * (1.0/(inH*inW) * 255)
+                var n = new Array(256);
+                for (var i=0; i<256; i++) // 초기화
+                    n[i] = 0.0;
+                for (var i=0; i<256; i++)
+                    n[i] = sumHisto[i] * (1.0/(inH*inW) * 255)
+
+                // 최종 : 정규화된 누적합을 이용해서 픽셀값 변환
+                for(var i=0; i<inH; i++) {
+                    for (var k=0; k<inW; k++) {
+                        outImage[i][k] = parseInt(n[inImage[i][k]]);
+                    }
+                }
+                // *******************************
+                displayImage();
+            }
+            
+        </script>
+    </HEAD>
+    <body style = "text-align:center" , onload="init()">
+        
+        <h1 id = "title3">Mini Project</h1>
+        <h1 id ="title1">파일 영상처리 프로그램입니다.</h1>
+        <h2 id = "title2">영상처리할 파일을 선택하고 원하는 처리를 눌러보세요.</h2>       
+        <br />
+          
+        <form>
+            <div class="filebox">
+                <label for="inFile">파일 등록</label>
+                <input type="file" id="inFile" onchange="openRawImage()" />
+              </div>
+              <br>
+            
+              <select name="pixel" onchange="selectAlgo(this.form.pixel)">
+                <option value="0"> 선택하세요. </option>
+                <optgroup label="화소점 처리">
+                    <option value="100"> 동일영상 </option>
+                    <option value="101"> 밝게/어둡게 </option>
+                    <option value="102"> 반전 </option>
+                    <option value="103"> 흑백</option>
+                    <option value="104"> 좌우미러링</option>
+                    <option value="105"> 상하미러링</option>
+                    <option value="106"> 90도 회전</option>
+                    <option value="107"> 180도 회전</option>
+                    <option value="108"> 270도 회전</option>
+                    <option value="109"> 2배 축소</option>
+                    <option value="110"> 2배 확대</option>
+                    <option value="111"> 흑백(127) </option>
+                    <option value="112"> 흑백(평균값)</option>
+                    <option value="113"> 흑백(중위수)</option>
+                </optgroup>
+
+                <optgroup label = "기하학처리">
+                    <option value="200"> 축소 </option>
+                    <option value="201"> 확대 </option>
+                    <option value="202"> 확대(백워딩) </option>
+                    <option value="210"> 회전 </option>
+                    <option value="211"> 회전(중앙, 백워딩) </option>
+                </optgroup>
+
+                <optgroup label = "화소영역처리">
+                    <option value="300"> 엠보싱 </option>
+                    <option value="301"> 블러링 </option>
+                    <option value="302"> 윤곽선 추출 </option>
+                </optgroup>
+
+                    <optgroup label = "히스토그램 처리">
+                        <option value="400"> 히스토스램 스트래칭 </option>
+                        <option value="401"> 엔드-인 탐색 </option>
+                        <option value="402"> 평활화 </option>
+                    </optgroup>
+                </select>
+             <br><br>
+        </form>
+        <canvas id="inCanvas" height=256 width=256 
+        style ="background-image:url('data:image/png;base64,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')">
+            </canvas>
+          
+        <canvas id="outCanvas" height=256 width=256
+            style ="background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAAAjVBMVEX////u7u7t7e0AAAD5+fn09PTv7+/+/v77+/vy8vKGhoYaGhrj4+Pi4uLc3NyEhIRhYWGSkpI2NjakpKS5ubnR0dHLy8tRUVERERGxsbEqKipLS0tYWFicnJxzc3N+fn40NDQ+Pj5tbW0jIyOPj49FRUULCwtfX19WVlahoaFwcHDNzc0uLi7Dw8MkJCSmCMsKAAAPD0lEQVR4nO2da2PiLBOGCUIgNaZaq6261taeX9v9/z/vTZghiTmQE9G4j3xbVu9y5QAzwzASoht3sHlxl4s9lOkeQXWX1F0s7hqklEPsaV0Jr4RXwivhlXBQw+qJkGJLaemulJZuKS3dBirFdWNxq9XFDV2DkiJO7p7L+J6L7D2nbnwlPd3F4y46SKlmhE5KS3+x5bBOJnUlvBJeCc8vdSUs1+o4xZ9Mini6MYmNxV3S0MV1D4+7himVoBbYR07OPiJtTa0BSA3KXL76FlfCK+H5h3UlvBLWjmIMYBGzIOXqxgQ26WCPo3sEiz9FsId4uofrDxFniFKigV0aXZC0BYiN569kSkq3WCq+Kd2lDJZ3qyiGG5mIcQ8RebuvwBQ0dHWXsulbcIdLL5jfDKTdzgNumVCI5X40rHa7tEroP5wbqKA9+MQa4f25YYrbxz16yp0JZ1rycTyM9qgHNIPl30xYPS/jHbxbBRPf2Az/XfHNplLB6gUGdc8qFx7CzI0LH7UqP3rCFi41S3hQ/crPJqjFuzyOUJPMZgI9g9l7ckSwiQb2UF+qxMblcK0m8bD0O3puy5vKiRrZskKq0reQe3xE+yKkbaWoUBf/tiOh66lJJu6xSEjUZh8T4aveTsoharrhnQgpCyKRlXVCdv+9+1r//bv+2s1/SUspsYoGF3QjlHMlYtdt9RbT1/TKvb4NWklJffk7Ed5EC/3EKuHve9482fttpPxHterX9/HLCMd+U8ICKehw5eS52ATbeQ2lIsJx+MWbKsLYF+baPfZij9l1BRLGn4o9bZnztBOtQilwxr/H2gJc331Opw93a434vCCJH19DKvT/kdA4KtdotYX/QELdk9zzho45djwhznQ+wRlULLZ32LklTaTC+zRRhNI8qirL+za63L6lTT+5Q75FtLuUjPR+k0Wst7vmI2En3yKakN89S4QIGPquR1Jcsjf4n1VtKXuE4XM1XljauAWMvQO9R9uaJIAJaHEGQjnxLW1NLxTDE+cFbiuV/k/0vz/89ISgZYGQqWXwj3QLpaikY21mXirht7JwqSyRonLxAS/pxRKqZ3RSLkWlek831gnrrTzd10MV7HkzSbnkES5C7VH5tdbDZhkR9ZIk8lKCR6GC1wk3SUFE6IbUztNAm8Y8qgRVW4DUgmOel1JuwJ5QoxSPJqMXWiHV1C5NtHRXL6EH5YUtuFlK2YjqU/VGNShCFc/iFVKwZG4FvUTCaD3fyyoprpZMcomE3mvkq4bfriCMbvULucSnVPk586qnlCnnYx163pdHqOyVVSUh2UaEsi/CgnlZd3VeLZCw6ilVhH+Za14t4lHVI4zj+32eehCKcC6rpET0lP6QumcxkNA8qro5AVRbVro1sto8NZZ5pZT4HEH8ud6oCuzSAqtN38xeLW+PvYJVWiHFIsv0wSg1VN9CBeD/siopF83zyyOkEGTzKqSk8iEPl0jo8Im+O6Y0H/KlYpcXSejQ6DF9pkYpT824uwqpgRKiB7w1Sblgni8vlZCqKAYzRTF+o088V0oNNYqhouejvSiV4vwuCQrXG1W9qH7cek4KdegaYhRlUlLt6H7Kaql4VNpq6/+8BXU9j3uuUYoK5eaDYVMgJf+n/jtg8FDXGtXJfIvwiaDBIqgYlkemR4jHUhwyA1fwug2LkLDl7fP48eNxfHcbSIOUJ2GL6cXJS01UNDhcKTCVZFCES7g10KaBQYr7sFP4uk1J0XDaU/uw0bcFzoVDImRPo+P2JsqlOIs3Qw8CI7XE/dUS++QPDodQ/hll29Qgxd04Efdhv13N5/Pd9EX3bNPL51AIJWbWPodjnd/cacRyKY/cf+SuiWqbQ4tcjKZRjNzKU5Vux+EOvh84YZwJcQ/345aUSzmC7goY13NJmicBJoSm9bB9pEIymBt3EkMhXPJPfN5MUiTYZgFXvmwTP0HCvqpG6JkxlV5AOYOt+l+TFHUF+Z1NMTth8/TtE9g2bXwOuCiKgR+yYHkz+o6PZGpYobDaj39cGKWoG15idxKEbeIqaPiUBUKNY4GQwjs3k0fDotxT+/Ejv4FU69PqvRJymEVnLDMsTDYbremlE8JbdCvc7MtD2QHWDH4phLsogzM7LA6AW1EwLCohuf/zQgij0W54ZlhoyYR3sGhYFNIuokn2EgiL8trQkpmpDxZM8S6md333XTWi3mphTj3QuYnpLhfu4Ezw0hQCRFyR1PeaJDbUrBoBhKJT1YhsBi2hHns+XgeLTC3PVbf58ZCSyhqAFk7JWohi5HOE85ZM4e6aB/bAeBJL5R47QSPLynNow61Iu75FwT1ES0bmX6z0sKgMVJra2kDo0eCw4Fx4gyKUaMmIqgtPIYNm9MWKCeUKPcX17ZKYpU5KiO7SjLmVjxYlybKYI2TfcXr3CFzDoRDGlkyNfXw8q4ER0iNC+TU6btuBEKYtmTrTAyQbQvgwTbh4HGXb5yAIjyyZOoQuRkiXx4QSAMebt9/F4QlDHztmlOoriqHXQ3VmRsSWTO1FzMMoQJBexDBq+uQTIaPQxxJeySezVIf1MDmfUVSfQds0Dvc3+o1pUOoB79c4kDLuUYGOjznR3yMYF7ghjatGoE3TrWoEEupIZ7KxUlCfocCY5MFr9LX35Kbs8N1MGZNkjxfPnuXdIIoBhERbMiKnVeEQsIO6ixv9+MD8+h2+OamNHHxf34hRqglhA98CCL13Pck0JaTqTEpsxsKZ22k0W6SkPAqIK6NUj4R3FNav0JJp4dSht6i25+Ho7peMZsi0y+OhQzY3S/VG+IqmGnNbua14VuabELBVH6VKVjuS8ujm6C6emHCUrINtCF0Jz+A9mESvAWTjHZ+ZYRNYNA7nI1SWTLvQg+sBIjwKS1yMc2dm1ngdbBPGK2NxjtxNfAc71BjiNDG0V3qTISslF2phgcNdFaMqJ8yPylwKgmvCGeHGD5obJ74GnEV7OCUfgnnoJ6j9t/S+hfFDCWrhLo+8OZ7jWpd6WOA2dvIXC6QWaib6G76o5lFlrbYOVSOQMLFkWufqw+DvhMsNUuQX7qLPTVJ9+Bbd87zhKX1xXLMUFIIIF+BTEzY+rZ6VgnSnD1+aTwUxHRj4uTRCBp7lUlZlsocv0grNnssiBH/iXjpOFaHjYOrUg7wkQhjzFvK5qqQoJtfseyCkeS0rVSPguXvSm29VUhTt2GnpqBoS9l01Ah2mT+llnPZSKZ0MsIvCCcOvGsHBFnvJL8UGKShsNHrjp6gaoQmxq6nl7cF2/0+QDKuWFEy+3/JkPn5bQjxZOVqKhjukGJBbicETwuO2JE33gD28NN8J8zAJIflpS5rvcnMO3mRcZWyYhLBO7CJTpikh5S4g6loggySEUh975jrNCZ3QbR7jIz5YQqrWiVcOlkpTwlAFAlejoCNhb+shU8NbezyziNWX4hgZWORGlSHsUjVC2zTNkiR4dDgBok+UlH2vhhT5hQyygPRWNaK1XepKSN6O6+m1PDSNiC7vq2pEa98CreckY6PtsXDwiN8DPjBCHNhTot6WEPcENqkkzyEQ4kK4J92P9nt4sTbDIoSTeH+o152Q652dKc9LnY0QrRFaPD00JKT6nd4PhxD8gtdFuE7ZKUAhwLx9El0Jba0WU1wnqKUCFFRnc95kpWxUjdA2Tf5TZV2407EibQ5QlJWIIDquIZn1qhEZq61y70nAvHBbIKUvbl2p9KjwANmWUOtVI5pZ3lSXDiySyjw+DV1N2Gh/iw6jmgjzUlYJqYQ8/fdCqW6EDrze3+SshB7shI79HggJB0fjXp6R0IWMio8Y0GquPnNecA47H6HA/HXe8IBRzZQA6a8Td/E8hDf6TemHMERUvtSjTio+OeE9zna9FaCgcvIK9mAjQmtRDB/2saXTYwEKKIKPx8bsVI1I5Zdm/nRmI4LTlJPTYwGKANJv/ai/n/MWJRYghwzpR79UKvfYtdwwh3fh2WP0tL4FJvEH5VK2CBHxxeMnJYTSLHEIvt8ik+BL3TF+OkKdQXFrkrJHiIhfjJyMEAGnRil7hA4iTuWpCDlE37+YUcoeoUvxpXjy/56EEE91j1NLQ9+/FeShR6wOa3SsGpEnzK08cNBkXDvdziBVu2qES6Ai0UgTmqTMsYT4NEJJeCE0sp9wGrVYKrP6e0JME8JuVSOO7dLciVvK4JVQ+xOFxmQidfz4mA/v1pDSP1jYtWqE2fLWJ9N3dYfVyfI+lsIqI/36FlRCWOYPOwOhPlLeJ6F22O54/WHZPI/vbnq/h3g0TUctTk0ItXv7I6R4juI1jiqcmrB3Hx9/vTPOcv/nCEn6mG83wlarRUnMOyfVvGqE/hSmA5GmpR4KExvyORJ1pPqpGoGN++oAxUY2PtqakxpY1QiKDwFXxZLWtL65nH3sLPwMX4/eEydw5PLQYliXQYjm9qHNsC6CUIK5vW01rAsgpAKOJ+3kP0qod0GnWa1/htAL1BZQnH1/QYTl62E6qu/JtV4ntNbA18N6VSOS8xkCIiSLuKtpqYeUVGmphzNUjUiMyRucRutVjWhkeduwS/NSzeq10Tj7vr1DYNG3mDxa8C3gN52xizKYRv8nhkGodhPnHQnhh6GxjjiD3bs/nYZljxCSPAPWjVDleLzADM0YbPPSoRCqs7deRS2LytqXykD7VSsOh7wk2mlYFglVJDP6MbduhHB8cBL+TQwzL7oNyx4hFChY8irCeGUsztzD2PJmInTxHK2lP1SjagS1+NNRsdREBfqmUTWLDlUjogbO/OgA5vZT9RdO0Ije7B75oqrERIJatmHEUEu1d+qXtkn5fzX9fIXUJFhhETTYV+9QNQLel1lCOB5Ei4u6zwgS6ne0XV19WloL/9xNZ0Z0/uUAl/kP1X/u5O0hzoG08tsIy+zvWJy77VNniy39+gMPVrObYbTZKvAkT9Y8m79vQQpCyYYu0fJ7lVLqXGqtcEFF1YgcYZf0gsxS3E3KqU9orhqR9bSbV404t1Rl1YjMxe3wq2TnkjrVL8udT+pKeCW8Ep5f6kr4DxAOcxGzuR42y4ioXTViOFIJatE54Nyz0vbX488nZeVXOvPDGpDUlfBKeCU8v9R/i7BgXqZNtMxT/LmkqqpGnOwARX9SJ94wOoPUf8DyvhJeCa+EZ5e6El4Jh0/4f+gy4D9UOoVKAAAAAElFTkSuQmCC)"> 
+            </canvas>
+    </BODY>
+</HTML>
