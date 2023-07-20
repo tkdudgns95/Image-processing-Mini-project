@@ -19,6 +19,17 @@
                  <img src="https://img.shields.io/badge/CSS-1572B6?style=plastic&logo=CSS3&logoColor=white">
                  <img src="https://img.shields.io/badge/javascript-F7DF1E?style=plastic&logo=javascript&logoColor=white">
                 
+## 📷 화소점 처리 구현
+<p align="center"><img src="https://github.com/CodeGym-Ko/CodeGym/assets/71168409/da77f1c0-c289-4d45-a38d-ecc2cb2cdeb1" width="800"/></p>
+<br/>
+
+## 📷 기하학 처리 구현 1.
+<p align="center"><img src="https://github.com/CodeGym-Ko/CodeGym/assets/71168409/dbf4812b-d2b2-44f2-aea3-43b461fcd0e2" width="800"/></p>
+<br/>
+
+## 📷 기하학 처리 구현 2.
+<p align="center"><img src="https://github.com/CodeGym-Ko/CodeGym/assets/71168409/905f2067-17d4-47c4-aa72-16f259366c55" width="800"/></p>
+<br/>
 
 ## 📃 프로젝트 구현 화면
 ![image](https://user-images.githubusercontent.com/71168409/232693263-4e99a37c-a06d-435f-af82-7e0617559923.png)
